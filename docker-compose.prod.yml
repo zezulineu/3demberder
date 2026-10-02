@@ -1,0 +1,22 @@
+# Production stack for a VPS that already has a reverse proxy on 80/443.
+# Pulls the prebuilt image; Watchtower restarts it when a new :latest is published.
+# Proxy wiring (labels / network) is added once we know which proxy the VPS runs.
+services:
+  app:
+    image: ghcr.io/zezulineu/3demberder:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+    volumes:
+      - ./data:/data
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+    ports:
+      - "127.0.0.1:3000:3000"   # for a host-level proxy; replace with a shared network for Traefik
+  watchtower:
+    image: containrrr/watchtower
+    restart: unless-stopped
+    command: --label-enable --interval 120 --cleanup
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
