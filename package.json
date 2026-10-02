@@ -1,0 +1,31 @@
+{
+  "name": "3demberder",
+  "version": "1.0.0",
+  "description": "Self-hosted 3D/AR product viewer for embedding into Shoptet product descriptions",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zezulineu/3demberder.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zezulineu/3demberder/issues"
+  },
+  "homepage": "https://github.com/zezulineu/3demberder#readme",
+  "dependencies": {
+    "@fastify/multipart": "^10.1.2",
+    "@fastify/static": "^10.1.5",
+    "@google/model-viewer": "^4.3.1",
+    "fastify": "^5.12.5",
+    "fflate": "^0.8.3"
+  },
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  }
+}
