@@ -21,6 +21,7 @@ command -v docker >/dev/null || { echo "Installing Docker…"; curl -fsSL https:
 docker compose version >/dev/null
 
 mkdir -p "$DIR/data" && cd "$DIR"
+chown -R 1000:1000 "$DIR/data"   # the container runs as the unprivileged "node" user (uid 1000)
 curl -fsSL "$RAW/docker-compose.prod.yml" -o docker-compose.yml
 sed -i "s#127.0.0.1:3000:3000#127.0.0.1:${PORT}:3000#" docker-compose.yml
 
