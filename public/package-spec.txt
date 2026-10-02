@@ -1,0 +1,74 @@
+3DEMBERDER - 3D PACKAGE SPECIFICATION (for humans and AI agents)
+================================================================
+You are producing a 3D package for ONE product. It will be uploaded to the 3demberder admin and shown to shoppers as an
+interactive 3D viewer with an AR button (view the product in your room on a phone). Follow this spec exactly.
+
+1. DELIVERABLE
+--------------
+One file: a .zip archive (or just the single .glb if there is nothing else).
+Name it after the product, ASCII only, e.g. OZ-600.zip.
+
+Preferred structure (flat is fine, one wrapper folder is also fine):
+
+  OZ-600.zip
+  |-- OZ-600.glb        REQUIRED  the 3D model, binary glTF 2.0
+  |-- OZ-600.usdz       optional  only if you can make a correct one (see 5)
+  `-- poster.jpg        optional  preview image shown while the model loads (see 4)
+
+2. THE MODEL (.glb) - REQUIRED
+------------------------------
+- Format: glTF 2.0 binary (.glb) with everything embedded (geometry, textures, materials). A .gltf with separate .bin and
+  texture files is accepted but .glb is strongly preferred. Never reference files outside the zip.
+- Exactly ONE model per package. If there are several .glb files only one is used (the one closest to the zip root).
+- Real-world scale: 1 unit = 1 METER. The AR view places the product at the size the file says, so a 60 cm wide panel must
+  be 0.6 units wide. Wrong scale = a tiny or giant product in the customer's room.
+- Orientation: Y axis up, product front facing +Z (glTF standard).
+- Origin: at the center of the underside of the product (where it touches the floor/wall). Do not leave it floating far
+  from the origin.
+- Materials: PBR metallic-roughness (glTF default). No custom shaders. Emissive is fine (e.g. for glowing LEDs).
+  Keep materials count low (ideally under 10).
+- Textures: PNG or JPG (WebP / KTX2 also work). Maximum 2048 x 2048 px each, ideally 1024-2048. Power-of-two sizes are
+  preferred.
+- Compression: Draco-compressed meshes and KTX2 textures work. Avoid other exotic extensions.
+- Do NOT include: cameras, lights, animations (unless the product itself moves), ground planes / floor shadows / backdrops,
+  environment geometry, text labels, hidden helper objects. The viewer adds its own lighting and soft shadow.
+- Cleanliness: apply all transforms, no duplicate or inside-out faces, no loose vertices, single scene.
+
+3. SIZE BUDGET (mobile phones on mobile data!)
+----------------------------------------------
+- Target: under 10 MB for the .glb. Hard limit: 150 MB per uploaded file, but anything above ~25 MB loads slowly on phones.
+- Triangles: aim for 50,000-150,000. Hide or remove geometry no one can see (screws inside the housing, etc.).
+
+4. POSTER IMAGE (optional)
+--------------------------
+- A render of the product, JPG or PNG or WebP, around 1200 px wide, same angle as the default view.
+- The file name MUST contain "poster", "preview" or "thumb" (e.g. poster.jpg). Otherwise it is only used if it is the single
+  image in a package that has a .glb.
+- Do not put texture images next to a .glb; textures belong INSIDE the .glb.
+
+5. USDZ (optional, iPhone AR)
+-----------------------------
+- iPhones can show AR from the .glb automatically, so a .usdz is usually NOT needed.
+- Add one only if it is correct: same real-world scale (meters), same orientation and origin as the .glb, under ~20 MB.
+- If unsure, leave it out.
+
+6. WHAT THE UPLOAD ACCEPTS
+--------------------------
+- Containers: .zip, or loose files.
+- Used extensions: .glb  .gltf  .bin  .usdz  .png  .jpg  .jpeg  .webp
+- Not used: hidden files (starting with "."), __MACOSX folders and any other file type.
+- A .zip may have its files in one top-level folder; that folder is stripped automatically.
+- If both .glb and .gltf exist, the .glb wins.
+- Re-uploading the same product replaces the previous model; the embed code on the shop stays valid.
+
+7. SELF-CHECK BEFORE YOU HAND IT OVER
+-------------------------------------
+[ ] one .glb, opens in a glTF viewer (e.g. https://gltf.report or Blender) without errors
+[ ] real-world size correct in meters, Y-up, origin at the base
+[ ] no lights, cameras, floor or background objects
+[ ] file size under 10 MB (or explain why not)
+[ ] textures embedded, <= 2048 px
+[ ] optional poster named poster.jpg
+[ ] zip contains no other files
+Report to the user: product name, model dimensions in cm (W x H x D), triangle count, file size, and anything you could not
+do from this spec.
