@@ -43,3 +43,12 @@ Update: `git pull && docker compose up -d --build`.
 ## AR checklist (test on real phones)
 AR can't be verified in a desktop browser. Test one product on: Android Chrome, iPhone Safari. If AR inside the
 Shoptet iframe misbehaves on some device, the fallback is a plain link/button to `/embed/<slug>` opened in a new tab.
+
+## Hands-off deploys (VPS with host-level nginx)
+One-time: add DNS `3d` A record → VPS IP, then on the VPS as root:
+```bash
+curl -fsSL https://raw.githubusercontent.com/zezulineu/3demberder/main/deploy/bootstrap.sh | bash
+```
+It installs Docker if missing, starts the app plus Watchtower, adds an nginx server block and an HTTPS certificate.
+After that every merge to `main` builds `ghcr.io/zezulineu/3demberder:latest` (GitHub Actions) and Watchtower
+rolls it out within ~2 minutes. Make the GHCR package public once (GitHub → Packages → Package settings).
