@@ -37,13 +37,16 @@ test('upload zip → embed page, files, auth, delete', async () => {
   const page = await app.inject('/embed/oak-chair');
   assert.equal(page.statusCode, 200);
   assert.match(page.body, /<model-viewer id="mv" src="\/files\/oak-chair\/chair\.glb"/);
-  assert.match(page.headers['content-security-policy'], /frame-ancestors https:\/\/shop\.test/);
+  assert.match(page.headers['content-security-policy'], /frame-ancestors 'self' https:\/\/shop\.test/);
 
   const file = await app.inject('/files/oak-chair/chair.glb');
   assert.equal(file.statusCode, 200);
   assert.equal(file.headers['content-type'], 'model/gltf-binary');
   assert.equal((await app.inject('/files/oak-chair/..%2F..%2Fmeta.json')).statusCode, 404);
   assert.equal((await app.inject('/vendor/model-viewer.min.js')).statusCode, 200);
+  const spec = await app.inject('/package-spec.txt');
+  assert.equal(spec.statusCode, 200);
+  assert.match(spec.body, /\.glb/);
 
   assert.equal((await app.inject('/preview/oak-chair')).statusCode, 401);
   const prev = await app.inject({ url: '/preview/oak-chair', headers: auth });

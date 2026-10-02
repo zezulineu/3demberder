@@ -54,7 +54,7 @@ export function classify(files) {
   const gltf = files.filter((f) => ext(f) === '.gltf').sort(byDepth)[0];
   const usdz = files.filter((f) => ext(f) === '.usdz').sort(byDepth)[0];
   const images = files.filter((f) => IMAGE_EXT.includes(ext(f)));
-  const poster = images.find((f) => /poster|preview|thumb/i.test(f.name)) ?? (glb && !gltf ? images[0] : undefined);
+  const poster = images.find((f) => /poster|preview|thumb/i.test(f.name)) ?? (glb && !gltf && images.length === 1 ? images[0] : undefined);
   return { model: glb ?? gltf, usdz, poster };
 }
 

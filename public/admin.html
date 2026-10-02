@@ -30,6 +30,13 @@
     <button id="go">Upload</button><span id="msg" class="msg"></span>
   </form>
 </section>
+<section>
+  <h2 style="margin-top:0">Package specification <small>(for AI agents and designers)</small></h2>
+  <p>Tell whoever builds the 3D package (a person or an AI agent) what to deliver: copy this text into the agent's prompt, or give it the link
+  <a href="/package-spec.txt" target="_blank"><code>/package-spec.txt</code></a> (public, plain text).</p>
+  <p><button type="button" id="copyspec">Copy specification</button> <small id="specmsg"></small></p>
+  <details><summary>Show the specification</summary><pre id="spec" style="white-space:pre-wrap;font:12px/1.5 ui-monospace,monospace;background:#f6f6f8;padding:12px;border-radius:8px;max-height:420px;overflow:auto">Loading…</pre></details>
+</section>
 <section><h2 style="margin-top:0">Library</h2><div id="list">Loading…</div></section>
 <script>
 const $=s=>document.querySelector(s);let files=[];
@@ -59,5 +66,7 @@ document.addEventListener('change',e=>{const t=e.target;if(!t.dataset.lang)retur
 document.addEventListener('click',async e=>{const t=e.target;
   if(t.dataset.copy){const m=_list.find(x=>x.slug===t.dataset.copy);await navigator.clipboard.writeText(m.embed);t.textContent='Copied ✔'}
   if(t.dataset.del&&confirm('Delete '+t.dataset.del+'? Embeds on the shop will break.')){await fetch('/api/models/'+t.dataset.del,{method:'DELETE'});load()}});
+fetch('/package-spec.txt').then(r=>r.text()).then(t=>{$('#spec').textContent=t});
+$('#copyspec').onclick=async()=>{const t=$('#spec').textContent;await navigator.clipboard.writeText(t);$('#specmsg').textContent='Copied ✔ – paste it into your AI agent'};
 load();
 </script></main></body></html>

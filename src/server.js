@@ -3,6 +3,7 @@ import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 import { timingSafeEqual } from 'node:crypto';
 import path from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { Store, slugify } from './store.js';
 import { embedPage, embedSnippet, previewPage, LANGS, color } from './embed.js';
@@ -37,10 +38,10 @@ export async function build(opts = {}) {
     }
   };
 
-  // Only the shop domains may frame the viewer.
+  // Only this app (admin preview) and the shop domains may frame the viewer.
   app.addHook('onSend', async (req, reply) => {
     if (req.url.startsWith('/embed/')) {
-      const ancestors = cfg.allowedOrigins.length ? cfg.allowedOrigins.join(' ') : '*';
+      const ancestors = cfg.allowedOrigins.length ? `'self' ${cfg.allowedOrigins.join(' ')}` : '*';
       reply.header('Content-Security-Policy', `frame-ancestors ${ancestors}`);
     } else if (!req.url.startsWith('/files/')) {
       reply.header('X-Frame-Options', 'DENY');
@@ -49,6 +50,10 @@ export async function build(opts = {}) {
 
   // --- public ---
   app.get('/healthz', async () => ({ ok: true }));
+  // Plain-text spec an AI agent can read to produce a valid 3D package; also shown in the admin.
+  app.get('/package-spec.txt', async (req, reply) =>
+    reply.type('text/plain; charset=utf-8').header('Cache-Control', 'no-cache')
+      .send(await readFile(path.join(here, '../public/package-spec.txt'), 'utf8')));
   app.get('/embed/:slug', async (req, reply) => {
     const meta = await store.get(slugify(req.params.slug));
     if (!meta) return reply.code(404).send('Not found');
@@ -82,7 +87,7 @@ export async function build(opts = {}) {
   // --- admin ---
   await app.register(async (admin) => {
     admin.addHook('onRequest', requireAdmin);
-    admin.get('/admin', async (req, reply) => reply.type('text/html').send(await (await import('node:fs/promises')).readFile(path.join(here, '../public/admin.html'))));
+    admin.get('/admin', async (req, reply) => reply.type('text/html').send(await readFile(path.join(here, '../public/admin.html'))));
     admin.get('/preview/:slug', async (req, reply) => {
       const meta = await store.get(slugify(req.params.slug));
       if (!meta) return reply.code(404).send('Not found');
