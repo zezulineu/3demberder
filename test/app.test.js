@@ -32,11 +32,11 @@ test('upload zip → embed page, files, auth, delete', async () => {
   assert.equal(meta.slug, 'oak-chair');
   assert.equal(meta.model, 'chair.glb');
   assert.equal(meta.usdz, 'chair.usdz');
-  assert.match(meta.embed, /^<iframe src="https:\/\/3d\.test\/embed\/oak-chair"/);
+  assert.match(meta.embed, /^<iframe src="https:\/\/3d\.test\/embed\/oak-chair\?lang=cs"/);
 
   const page = await app.inject('/embed/oak-chair');
   assert.equal(page.statusCode, 200);
-  assert.match(page.body, /<model-viewer src="\/files\/oak-chair\/chair\.glb"/);
+  assert.match(page.body, /<model-viewer id="mv" src="\/files\/oak-chair\/chair\.glb"/);
   assert.match(page.headers['content-security-policy'], /frame-ancestors https:\/\/shop\.test/);
 
   const file = await app.inject('/files/oak-chair/chair.glb');

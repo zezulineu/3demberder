@@ -5,7 +5,7 @@ import { timingSafeEqual } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Store, slugify } from './store.js';
-import { embedPage, embedSnippet } from './embed.js';
+import { embedPage, embedSnippet, LANGS, color } from './embed.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -51,10 +51,14 @@ export async function build(opts = {}) {
   app.get('/embed/:slug', async (req, reply) => {
     const meta = await store.get(slugify(req.params.slug));
     if (!meta) return reply.code(404).send('Not found');
-    const { bg = '', rotate } = req.query;
-    const color = /^[0-9a-f]{3,8}$/i.test(bg) ? `#${bg}` : /^[a-z]{3,20}$/i.test(bg) ? bg : 'transparent';
+    const { bg, page, rotate, lang } = req.query;
     return reply.type('text/html').header('Cache-Control', 'public, max-age=60')
-      .send(embedPage(meta, { bg: color, rotate: rotate !== '0' }));
+      .send(embedPage(meta, {
+        lang: LANGS.includes(lang) ? lang : 'cs',
+        bg: color(bg, '#000'),
+        page: color(page, '#f2f1ed'),
+        rotate: rotate === '1',
+      }));
   });
   app.get('/files/:slug/*', async (req, reply) => {
     const slug = slugify(req.params.slug);
