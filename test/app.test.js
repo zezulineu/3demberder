@@ -45,6 +45,11 @@ test('upload zip → embed page, files, auth, delete', async () => {
   assert.equal((await app.inject('/files/oak-chair/..%2F..%2Fmeta.json')).statusCode, 404);
   assert.equal((await app.inject('/vendor/model-viewer.min.js')).statusCode, 200);
 
+  assert.equal((await app.inject('/preview/oak-chair')).statusCode, 401);
+  const prev = await app.inject({ url: '/preview/oak-chair', headers: auth });
+  assert.equal(prev.statusCode, 200);
+  assert.match(prev.body, /\/embed\/oak-chair\?lang=de/);
+
   const bad = await app.inject({ method: 'POST', url: '/api/models', ...multipart({ name: 'x' }, [{ name: 'a.txt', data: Buffer.from('hi') }]) });
   assert.equal(bad.statusCode, 400);
 

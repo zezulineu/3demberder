@@ -5,9 +5,10 @@ import { timingSafeEqual } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Store, slugify } from './store.js';
-import { embedPage, embedSnippet, LANGS, color } from './embed.js';
+import { embedPage, embedSnippet, previewPage, LANGS, color } from './embed.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+const isProd = process.env.NODE_ENV === 'production';
 
 export async function build(opts = {}) {
   const cfg = {
@@ -52,7 +53,7 @@ export async function build(opts = {}) {
     const meta = await store.get(slugify(req.params.slug));
     if (!meta) return reply.code(404).send('Not found');
     const { bg, page, rotate, lang } = req.query;
-    return reply.type('text/html').header('Cache-Control', 'public, max-age=60')
+    return reply.type('text/html').header('Cache-Control', isProd ? 'public, max-age=60' : 'no-store')
       .send(embedPage(meta, {
         lang: LANGS.includes(lang) ? lang : 'cs',
         bg: color(bg, '#000'),
@@ -82,6 +83,11 @@ export async function build(opts = {}) {
   await app.register(async (admin) => {
     admin.addHook('onRequest', requireAdmin);
     admin.get('/admin', async (req, reply) => reply.type('text/html').send(await (await import('node:fs/promises')).readFile(path.join(here, '../public/admin.html'))));
+    admin.get('/preview/:slug', async (req, reply) => {
+      const meta = await store.get(slugify(req.params.slug));
+      if (!meta) return reply.code(404).send('Not found');
+      return reply.type('text/html').header('Cache-Control', 'no-store').send(previewPage(meta, { snippet: (lang) => embedSnippet('', meta.slug, { lang }) }));
+    });
     admin.get('/api/models', async () => {
       const models = await store.list();
       return models.map((m) => ({ ...m, embed: embedSnippet(cfg.publicUrl, m.slug), url: `${cfg.publicUrl}/embed/${m.slug}` }));
@@ -110,7 +116,7 @@ export async function build(opts = {}) {
     });
   });
 
-  return { app, cfg };
+  return { app, cfg, store };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

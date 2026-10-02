@@ -107,3 +107,38 @@ export function embedSnippet(publicUrl, slug, { height = 560, lang = 'cs' } = {}
   const src = `${publicUrl.replace(/\/$/, '')}/embed/${encodeURIComponent(slug)}?lang=${lang}`;
   return `<iframe src="${src}" title="3D model" width="100%" height="${height}" style="border:0;max-width:100%;min-height:${height}px" allow="xr-spatial-tracking; fullscreen; autoplay" allowfullscreen loading="lazy"></iframe>`;
 }
+
+// Dev/admin helper: shows the exact embed snippet inside a mock Shoptet product page at several widths.
+export function previewPage(meta, { snippet }) {
+  const snippets = Object.fromEntries(LANGS.map((l) => [l, snippet(l)]));
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Preview – ${esc(meta.name)}</title><link rel="icon" href="data:,">
+<style>
+  body{margin:0;font:16px/1.6 system-ui,sans-serif;background:#e9e9ee;color:#222}
+  .tools{position:sticky;top:0;z-index:2;display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 16px;background:#111;color:#fff}
+  .tools b{margin-right:8px}.tools button{padding:6px 12px;border:1px solid #555;border-radius:6px;background:#222;color:#fff;cursor:pointer}
+  .tools button.on{background:#fff;color:#111}.tools span{opacity:.6;margin-left:auto;font-size:13px}
+  .shop{margin:20px auto;background:#fff;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.12);transition:width .2s;max-width:100%}
+  h1{margin-top:0}.fake{color:#777}
+</style></head><body>
+<div class="tools"><b>${esc(meta.name)}</b>
+  <button data-w="1100" class="on">Desktop</button><button data-w="768">Tablet</button><button data-w="390">Phone</button>
+  <b style="margin-left:16px">Lang</b><button data-l="cs" class="on">CZ</button><button data-l="de">DE</button><button data-l="en">EN</button>
+  <span>This is the exact embed code pasted into a product description. Edit src/, save, the page reloads on refresh.</span></div>
+<div class="shop" id="shop" style="width:1100px">
+  <h1>${esc(meta.name)}</h1>
+  <p class="fake">Product description text above the 3D model. Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+  <div id="embed"></div>
+  <p class="fake">Product description text below the 3D model. Technical parameters, delivery and so on.</p>
+</div>
+<script>
+const S=${JSON.stringify(snippets)};let lang='cs';
+const draw=()=>document.getElementById('embed').innerHTML=S[lang];
+document.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{document.getElementById('shop').style.width=b.dataset.w+'px';
+  document.querySelectorAll('[data-w]').forEach(x=>x.classList.toggle('on',x===b))});
+document.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{lang=b.dataset.l;draw();
+  document.querySelectorAll('[data-l]').forEach(x=>x.classList.toggle('on',x===b))});
+draw();
+</script></body></html>`;
+}
