@@ -4,9 +4,9 @@ const enc = (rel) => rel.split('/').map(encodeURIComponent).join('/');
 export const LANGS = ['cs', 'de', 'en'];
 
 const T = {
-  cs: { hint: 'Táhni pro otočení', left: 'Otočit doleva', right: 'Otočit doprava', play: 'Spustit rotaci', pause: 'Zastavit rotaci', out: 'Oddálit', in: 'Přiblížit', full: 'Celá obrazovka', ar: 'Zobrazit v prostoru (AR)' },
-  de: { hint: 'Zum Drehen ziehen', left: 'Nach links drehen', right: 'Nach rechts drehen', play: 'Rotation starten', pause: 'Rotation stoppen', out: 'Verkleinern', in: 'Vergrößern', full: 'Vollbild', ar: 'In deinem Raum ansehen (AR)' },
-  en: { hint: 'Drag to rotate', left: 'Rotate left', right: 'Rotate right', play: 'Start rotation', pause: 'Stop rotation', out: 'Zoom out', in: 'Zoom in', full: 'Fullscreen', ar: 'View in your space (AR)' },
+  cs: { hint: 'Táhni pro otočení', left: 'Otočit doleva', right: 'Otočit doprava', play: 'Spustit rotaci', pause: 'Zastavit rotaci', out: 'Oddálit', in: 'Přiblížit', full: 'Celá obrazovka', ar: 'Zobrazit v prostoru (AR)', loading: 'Načítám 3D model…', failed: 'Model se nepodařilo načíst' },
+  de: { hint: 'Zum Drehen ziehen', left: 'Nach links drehen', right: 'Nach rechts drehen', play: 'Rotation starten', pause: 'Rotation stoppen', out: 'Verkleinern', in: 'Vergrößern', full: 'Vollbild', ar: 'In deinem Raum ansehen (AR)', loading: '3D-Modell wird geladen…', failed: 'Modell konnte nicht geladen werden' },
+  en: { hint: 'Drag to rotate', left: 'Rotate left', right: 'Rotate right', play: 'Start rotation', pause: 'Stop rotation', out: 'Zoom out', in: 'Zoom in', full: 'Fullscreen', ar: 'View in your space (AR)', loading: 'Loading 3D model…', failed: 'Could not load the model' },
 };
 
 const icon = (d) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
@@ -46,6 +46,13 @@ export function embedPage(meta, { lang = 'cs', bg = '#000', page = '#f2f1ed', ro
     background:rgba(232,232,232,.92);color:#555;font:500 15px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;
     text-transform:uppercase;white-space:nowrap;pointer-events:none;transition:opacity .4s}
   .hint.gone{opacity:0}
+  .loader{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+    pointer-events:none;transition:opacity .3s;font:500 14px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.06em;text-transform:uppercase;color:#fff}
+  .loader .card{display:flex;flex-direction:column;align-items:center;gap:12px;padding:18px 26px;border-radius:16px;background:rgba(0,0,0,.6)}
+  .loader .track{width:200px;height:4px;border-radius:4px;background:rgba(255,255,255,.25);overflow:hidden}
+  .loader .fill{height:100%;width:0;background:#fff;border-radius:4px;transition:width .2s}
+  .loader.done{opacity:0}.loader.err .track{display:none}
+  .bar.busy button{opacity:.35;pointer-events:none}
   .bar{display:flex;justify-content:center;gap:16px;padding:16px 8px 20px}
   .bar button{width:56px;height:56px;border-radius:50%;border:1px solid #e3e1dc;background:#fff;color:#111;display:grid;place-items:center;
     cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.09);transition:transform .1s,opacity .2s;-webkit-tap-highlight-color:transparent}
@@ -59,14 +66,15 @@ export function embedPage(meta, { lang = 'cs', bg = '#000', page = '#f2f1ed', ro
 <body>
 <div class="stage">
   <model-viewer id="mv" src="${base}${enc(meta.model)}"${attr('ios-src', meta.usdz && base + enc(meta.usdz))}${attr('poster', meta.poster && base + enc(meta.poster))}
-    alt="${esc(meta.name)}" camera-controls touch-action="pan-y" ${rotate ? 'auto-rotate' : ''}
+    alt="${esc(meta.name)}" camera-controls touch-action="pan-y" auto-rotate-delay="0" rotation-per-second="18deg" ${rotate ? 'auto-rotate' : ''}
     shadow-intensity="1" environment-image="neutral" exposure="1" loading="eager" reveal="auto" interaction-prompt="none"
     ar ar-modes="webxr scene-viewer quick-look" ar-scale="auto" ar-placement="floor">
     <button slot="ar-button" class="ar">${esc(t.ar)}</button>
   </model-viewer>
-  <div class="hint" id="hint">${esc(t.hint)}</div>
+  <div class="hint gone" id="hint">${esc(t.hint)}</div>
+  <div class="loader" id="loader" role="status" aria-live="polite"><div class="card"><span id="ltext">${esc(t.loading)} 0 %</span><div class="track"><div class="fill" id="lfill"></div></div></div></div>
 </div>
-<div class="bar">
+<div class="bar busy" id="bar">
   ${btn('left', 'left', t.left)}${btn('right', 'right', t.right)}${btn('play', rotate ? 'pause' : 'play', rotate ? t.pause : t.play)}
   ${btn('out', 'out', t.out)}${btn('in', 'in', t.in)}${btn('full', 'full', t.full)}
 </div>
@@ -78,7 +86,12 @@ const S={th:0,ph:0,r:0};            // camera target; buttons edit it, so quick 
 const read=()=>{const o=mv.getCameraOrbit();S.th=o.theta;S.ph=o.phi;S.r=o.radius};
 const apply=()=>{mv.cameraOrbit=S.th+'rad '+S.ph+'rad '+S.r+'m';sync()};
 const sync=()=>{if(!r0)return;$('out').disabled=S.r>=r0*0.995;$('in').disabled=S.r<=rMin*1.005};
+let touched=false;
+mv.addEventListener('progress',e=>{const p=Math.round((e.detail.totalProgress||0)*100);
+  $('lfill').style.width=p+'%';$('ltext').textContent=T.loading+' '+p+' %'});
+mv.addEventListener('error',()=>{$('loader').classList.add('err');$('ltext').textContent=T.failed});
 mv.addEventListener('load',()=>{
+  $('loader').classList.add('done');$('bar').classList.remove('busy');if(!touched)$('hint').classList.remove('gone');
   read();r0=S.r;rMin=r0*0.35;
   mv.minCameraOrbit='auto auto '+rMin+'m';mv.maxCameraOrbit='auto auto '+r0+'m';sync();
 });
@@ -98,7 +111,7 @@ if(document.fullscreenEnabled||document.webkitFullscreenEnabled){
     if(d.fullscreenElement||d.webkitFullscreenElement)(d.exitFullscreen||d.webkitExitFullscreen).call(d);
     else(el.requestFullscreen||el.webkitRequestFullscreen).call(el)};
 }else $('full').style.display='none';
-mv.addEventListener('pointerdown',()=>$('hint').classList.add('gone'),{once:true});
+mv.addEventListener('pointerdown',()=>{touched=true;$('hint').classList.add('gone')},{once:true});
 </script>
 </body></html>`;
 }
@@ -106,4 +119,39 @@ mv.addEventListener('pointerdown',()=>$('hint').classList.add('gone'),{once:true
 export function embedSnippet(publicUrl, slug, { height = 560, lang = 'cs' } = {}) {
   const src = `${publicUrl.replace(/\/$/, '')}/embed/${encodeURIComponent(slug)}?lang=${lang}`;
   return `<iframe src="${src}" title="3D model" width="100%" height="${height}" style="border:0;max-width:100%;min-height:${height}px" allow="xr-spatial-tracking; fullscreen; autoplay" allowfullscreen loading="lazy"></iframe>`;
+}
+
+// Dev/admin helper: shows the exact embed snippet inside a mock Shoptet product page at several widths.
+export function previewPage(meta, { snippet }) {
+  const snippets = Object.fromEntries(LANGS.map((l) => [l, snippet(l)]));
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Preview – ${esc(meta.name)}</title><link rel="icon" href="data:,">
+<style>
+  body{margin:0;font:16px/1.6 system-ui,sans-serif;background:#e9e9ee;color:#222}
+  .tools{position:sticky;top:0;z-index:2;display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 16px;background:#111;color:#fff}
+  .tools b{margin-right:8px}.tools button{padding:6px 12px;border:1px solid #555;border-radius:6px;background:#222;color:#fff;cursor:pointer}
+  .tools button.on{background:#fff;color:#111}.tools span{opacity:.6;margin-left:auto;font-size:13px}
+  .shop{margin:20px auto;background:#fff;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.12);transition:width .2s;max-width:100%}
+  h1{margin-top:0}.fake{color:#777}
+</style></head><body>
+<div class="tools"><b>${esc(meta.name)}</b>
+  <button data-w="1100" class="on">Desktop</button><button data-w="768">Tablet</button><button data-w="390">Phone</button>
+  <b style="margin-left:16px">Lang</b><button data-l="cs" class="on">CZ</button><button data-l="de">DE</button><button data-l="en">EN</button>
+  <span>This is the exact embed code pasted into a product description. Edit src/, save, the page reloads on refresh.</span></div>
+<div class="shop" id="shop" style="width:1100px">
+  <h1>${esc(meta.name)}</h1>
+  <p class="fake">Product description text above the 3D model. Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+  <div id="embed"></div>
+  <p class="fake">Product description text below the 3D model. Technical parameters, delivery and so on.</p>
+</div>
+<script>
+const S=${JSON.stringify(snippets)};let lang='cs';
+const draw=()=>document.getElementById('embed').innerHTML=S[lang];
+document.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{document.getElementById('shop').style.width=b.dataset.w+'px';
+  document.querySelectorAll('[data-w]').forEach(x=>x.classList.toggle('on',x===b))});
+document.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{lang=b.dataset.l;draw();
+  document.querySelectorAll('[data-l]').forEach(x=>x.classList.toggle('on',x===b))});
+draw();
+</script></body></html>`;
 }

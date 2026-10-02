@@ -51,14 +51,13 @@ async function load(){const r=await fetch('/api/models');const list=await r.json
   <small>${m.usdz?'GLB + USDZ':'GLB'}${m.poster?' + poster':''} · updated ${new Date(m.updatedAt).toLocaleString()}</small>
   <textarea rows="3" readonly onclick="this.select()" id="t-${esc(m.slug)}">${esc(m.embed)}</textarea>
   <p><select data-lang="${esc(m.slug)}"><option value="cs">CZ</option><option value="de">DE</option><option value="en">EN</option></select>
-  <button class="ghost" data-copy="${esc(m.slug)}">Copy embed code</button> <button class="ghost" data-prev="${esc(m.slug)}">Preview</button> <button class="ghost" data-del="${esc(m.slug)}">Delete</button></p><div id="p-${esc(m.slug)}"></div></div>`).join(''):'Nothing uploaded yet.';
+  <button class="ghost" data-copy="${esc(m.slug)}">Copy embed code</button> <a href="/preview/${esc(m.slug)}" target="_blank"><button type="button" class="ghost">Preview</button></a> <button class="ghost" data-del="${esc(m.slug)}">Delete</button></p><div id="p-${esc(m.slug)}"></div></div>`).join(''):'Nothing uploaded yet.';
   window._list=list;}
 document.addEventListener('change',e=>{const t=e.target;if(!t.dataset.lang)return;
   const m=_list.find(x=>x.slug===t.dataset.lang);m.embed=m.embed.replace(/lang=\w+/,'lang='+t.value);
   document.getElementById('t-'+m.slug).value=m.embed;document.getElementById('p-'+m.slug).innerHTML=''});
 document.addEventListener('click',async e=>{const t=e.target;
   if(t.dataset.copy){const m=_list.find(x=>x.slug===t.dataset.copy);await navigator.clipboard.writeText(m.embed);t.textContent='Copied ✔'}
-  if(t.dataset.prev){const m=_list.find(x=>x.slug===t.dataset.prev);document.getElementById('p-'+m.slug).innerHTML=m.embed}
   if(t.dataset.del&&confirm('Delete '+t.dataset.del+'? Embeds on the shop will break.')){await fetch('/api/models/'+t.dataset.del,{method:'DELETE'});load()}});
 load();
 </script></main></body></html>

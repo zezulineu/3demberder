@@ -10,13 +10,20 @@ Built on Google's [`<model-viewer>`](https://modelviewer.dev), Fastify, and plai
 Shoptet strips `<script>` tags from product descriptions but keeps `<iframe>`. The iframe loads `/embed/<slug>` from this
 app, so the viewer code lives here and can be updated without touching any product.
 
-## Run locally
+## Local development (preview before deploying)
+Needs Node 22+. No `.env` required.
 ```bash
-cp .env.example .env   # set ADMIN_PASSWORD
-npm install
-npm run dev            # http://localhost:3000/admin  (user: admin)
-npm test
+git pull && npm install
+npm run dev
 ```
+Then open:
+- **http://localhost:3000/preview/demo** – the viewer inside a mock product page; switch Desktop / Tablet / Phone and CZ / DE / EN
+- http://localhost:3000/embed/demo?lang=cs – the bare viewer page
+- http://localhost:3000/admin – user `admin`, password `dev` (upload your own models here, data stays in `./data`, which git ignores)
+
+The server restarts when you edit files in `src/`; for `public/admin.html` just refresh. A demo cube is created on first start.
+After a change looks right locally: commit, open a PR, merge – GitHub builds the image and the VPS updates itself.
+Run `npm test` before committing.
 
 ## Package format
 Upload a `.zip` (or loose files) containing:
