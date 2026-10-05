@@ -1,5 +1,5 @@
 // Builds a tiny red cube as a binary glTF, so local dev has a model to preview without any real data.
-export function demoGlb() {
+export function demoGlb(scale = [1, 1, 1]) {
   const p = [-1, -1, 1, 1, -1, 1, 1, 1, 1, -1, 1, 1, -1, -1, -1, 1, -1, -1, 1, 1, -1, -1, 1, -1];
   const idx = [0, 1, 2, 0, 2, 3, 5, 4, 7, 5, 7, 6, 4, 0, 3, 4, 3, 7, 1, 5, 6, 1, 6, 2, 3, 2, 6, 3, 6, 7, 4, 5, 1, 4, 1, 0];
   const pos = Buffer.from(new Float32Array(p).buffer);
@@ -7,7 +7,7 @@ export function demoGlb() {
   const pad = (b, fill) => Buffer.concat([b, Buffer.alloc((4 - (b.length % 4)) % 4, fill)]);
   const bin = pad(Buffer.concat([pos, ind]), 0);
   const json = pad(Buffer.from(JSON.stringify({
-    asset: { version: '2.0' }, scene: 0, scenes: [{ nodes: [0] }], nodes: [{ mesh: 0 }],
+    asset: { version: '2.0' }, scene: 0, scenes: [{ nodes: [0] }], nodes: [{ mesh: 0, scale }],
     meshes: [{ primitives: [{ attributes: { POSITION: 0 }, indices: 1, material: 0 }] }],
     materials: [{ pbrMetallicRoughness: { baseColorFactor: [0.8, 0.05, 0.1, 1], metallicFactor: 0.2 } }],
     buffers: [{ byteLength: bin.length }],

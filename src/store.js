@@ -58,6 +58,18 @@ export function classify(files) {
   return { model: glb ?? gltf, usdz, poster };
 }
 
+// Product dimensions in millimetres as entered in the admin: width (x), height (y), depth (z) in the model's front view.
+// Returns null when all three are blank, throws when partly filled or out of range.
+export function parseDims({ w, h, d } = {}) {
+  const vals = [w, h, d].map((v) => (v === '' || v == null ? null : Number(String(v).replace(',', '.'))));
+  if (vals.every((v) => v === null)) return null;
+  if (vals.some((v) => v === null || !Number.isFinite(v) || v <= 0 || v > 100000)) {
+    throw Object.assign(new Error('Enter width, height and depth in mm (numbers between 0 and 100000), or leave all three empty'), { statusCode: 400 });
+  }
+  const [W, H, D] = vals.map((v) => Math.round(v * 10) / 10);
+  return { w: W, h: H, d: D };
+}
+
 export class Store {
   constructor(dataDir) {
     this.root = path.resolve(dataDir, 'models');
@@ -83,7 +95,7 @@ export class Store {
       return null;
     }
   }
-  async save({ slug, name, sku, files }) {
+  async save({ slug, name, sku, files, dims }) {
     const expanded = expandUploads(files);
     const { model, usdz, poster } = classify(expanded);
     if (!model) throw Object.assign(new Error('No .glb or .gltf file found in the upload'), { statusCode: 400 });
@@ -97,11 +109,21 @@ export class Store {
     }
     const now = new Date().toISOString();
     const meta = {
-      slug, name, sku: sku || '',
+      slug, name, sku: sku || '', dims: dims !== undefined ? dims : prev?.dims ?? null,
       model: model.name, usdz: usdz?.name ?? null, poster: poster?.name ?? null,
       createdAt: prev?.createdAt ?? now, updatedAt: now,
     };
     await writeFile(path.join(dir, 'meta.json'), JSON.stringify(meta, null, 2));
+    return meta;
+  }
+  async update(slug, patch) {
+    const meta = await this.get(slug);
+    if (!meta) return null;
+    if ('dims' in patch) meta.dims = patch.dims;
+    if (patch.name) meta.name = patch.name;
+    if ('sku' in patch) meta.sku = patch.sku || '';
+    meta.updatedAt = new Date().toISOString();
+    await writeFile(path.join(this.dir(slug), 'meta.json'), JSON.stringify(meta, null, 2));
     return meta;
   }
   async remove(slug) {

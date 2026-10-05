@@ -8,7 +8,7 @@ const { demoGlb } = await import('./demo-glb.mjs');
 const { app, cfg, store } = await build({ logger: false });
 
 if (!(await store.list()).length) {
-  await store.save({ slug: 'demo', name: 'Demo cube', files: [{ name: 'demo.glb', data: demoGlb() }] });
+  await store.save({ slug: 'demo', name: 'Demo panel', files: [{ name: 'demo.glb', data: demoGlb([0.3, 0.05, 0.15]) }], dims: { w: 600, h: 100, d: 300 } });
 }
 await app.listen({ port: cfg.port, host: '127.0.0.1' });
 const u = `http://localhost:${cfg.port}`;

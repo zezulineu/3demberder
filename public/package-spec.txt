@@ -70,5 +70,6 @@ Preferred structure (flat is fine, one wrapper folder is also fine):
 [ ] textures embedded, <= 2048 px
 [ ] optional poster named poster.jpg
 [ ] zip contains no other files
-Report to the user: product name, model dimensions in cm (W x H x D), triangle count, file size, and anything you could not
-do from this spec.
+Report to the user: product name, the real product dimensions in MILLIMETRES as width x height x depth (front view: width = X,
+height = Y, depth = Z), triangle count, file size, and anything you could not do from this spec. The user enters the
+dimensions in the admin; the viewer shows them to shoppers behind a ruler button (draws width/height/depth lines on the model).
