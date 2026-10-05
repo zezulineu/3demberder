@@ -56,6 +56,22 @@ test('upload zip → embed page, files, auth, delete', async () => {
   const bad = await app.inject({ method: 'POST', url: '/api/models', ...multipart({ name: 'x' }, [{ name: 'a.txt', data: Buffer.from('hi') }]) });
   assert.equal(bad.statusCode, 400);
 
+  // exact product dimensions: stored, shown in the viewer, editable without re-upload, validated
+  assert.equal(meta.dims, null);
+  const patch = (body) => app.inject({ method: 'PATCH', url: '/api/models/oak-chair', headers: { ...auth, 'content-type': 'application/json' }, payload: JSON.stringify(body) });
+  const ok = await patch({ dims: { w: '612,5', h: '98', d: 305 } });
+  assert.equal(ok.statusCode, 200);
+  assert.deepEqual(ok.json().dims, { w: 612.5, h: 98, d: 305 });
+  assert.match((await app.inject('/embed/oak-chair')).body, /DIMS=\{"w":612\.5,"h":98,"d":305\}/);
+  assert.equal((await patch({ dims: { w: '600', h: '', d: '' } })).statusCode, 400);
+  assert.equal((await patch({ dims: { w: '-1', h: '2', d: '3' } })).statusCode, 400);
+  assert.equal((await patch({ dims: { w: '', h: '', d: '' } })).json().dims, null);
+  assert.equal((await app.inject({ method: 'PATCH', url: '/api/models/nope', headers: { ...auth, 'content-type': 'application/json' }, payload: '{}' })).statusCode, 404);
+  // re-upload without dimensions keeps the saved ones
+  await patch({ dims: { w: 1, h: 2, d: 3 } });
+  const re = await app.inject({ method: 'POST', url: '/api/models', ...multipart({ name: 'Oak Chair' }, [{ name: 'pack.zip', data: zip }]) });
+  assert.deepEqual(re.json().dims, { w: 1, h: 2, d: 3 });
+
   assert.equal((await app.inject({ method: 'DELETE', url: '/api/models/oak-chair', headers: auth })).statusCode, 200);
   assert.equal((await app.inject('/embed/oak-chair')).statusCode, 404);
 });

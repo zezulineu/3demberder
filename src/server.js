@@ -5,7 +5,7 @@ import { timingSafeEqual } from 'node:crypto';
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { Store, slugify } from './store.js';
+import { Store, slugify, parseDims } from './store.js';
 import { embedPage, embedSnippet, previewPage, LANGS, color } from './embed.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -57,13 +57,14 @@ export async function build(opts = {}) {
   app.get('/embed/:slug', async (req, reply) => {
     const meta = await store.get(slugify(req.params.slug));
     if (!meta) return reply.code(404).send('Not found');
-    const { bg, page, rotate, lang } = req.query;
+    const { bg, page, rotate, lang, dims } = req.query;
     return reply.type('text/html').header('Cache-Control', isProd ? 'public, max-age=60' : 'no-store')
       .send(embedPage(meta, {
         lang: LANGS.includes(lang) ? lang : 'cs',
         bg: color(bg, '#000'),
         page: color(page, '#f2f1ed'),
         rotate: rotate === '1',
+        dims: dims === '1',
       }));
   });
   app.get('/files/:slug/*', async (req, reply) => {
@@ -109,11 +110,27 @@ export async function build(opts = {}) {
       if (!name || !slug) return reply.code(400).send({ error: 'Name is required' });
       if (!files.length) return reply.code(400).send({ error: 'Attach a .glb/.gltf file or a .zip package' });
       try {
-        const meta = await store.save({ slug, name, sku: fields.sku, files });
+        const blank = [fields.width, fields.height, fields.depth].every((v) => !v);
+        const dims = blank ? undefined : parseDims({ w: fields.width, h: fields.height, d: fields.depth });
+        const meta = await store.save({ slug, name, sku: fields.sku, files, dims });
         return { ...meta, embed: embedSnippet(cfg.publicUrl, slug), url: `${cfg.publicUrl}/embed/${slug}` };
       } catch (e) {
         return reply.code(e.statusCode ?? 400).send({ error: e.message });
       }
+    });
+    admin.patch('/api/models/:slug', async (req, reply) => {
+      const body = req.body ?? {};
+      const patch = {};
+      try {
+        if ('dims' in body) patch.dims = body.dims ? parseDims(body.dims) : null;
+      } catch (e) {
+        return reply.code(e.statusCode ?? 400).send({ error: e.message });
+      }
+      if (typeof body.name === 'string' && body.name.trim()) patch.name = body.name.trim();
+      if (typeof body.sku === 'string') patch.sku = body.sku.trim();
+      const meta = await store.update(slugify(req.params.slug), patch);
+      if (!meta) return reply.code(404).send({ error: 'Not found' });
+      return { ...meta, embed: embedSnippet(cfg.publicUrl, meta.slug), url: `${cfg.publicUrl}/embed/${meta.slug}` };
     });
     admin.delete('/api/models/:slug', async (req) => {
       await store.remove(slugify(req.params.slug));
